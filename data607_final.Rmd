@@ -1,0 +1,84 @@
+---
+title: "Data607_final"
+author: "Wei Zhou"
+date: "5/7/2019"
+output: 
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+---
+
+Reference: http://rpubs.com/jasano/inspex
+
+# Acquiring resturant data from NYC Open Data using API
+
+```{r echo=FALSE}
+# install.packages("RSocrata")
+library(RSocrata)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
+library(httr)
+library(keyring)
+library(rjson)
+```
+
+## Read in data
+
+###Acquire Data using NYC open data API
+```{r}
+ all_df<- read.socrata("https://data.cityofnewyork.us/resource/43nn-pn8j.json")
+```
+
+###It is always good to know what your data looks like. Using `Glimpse` function will give you a snapshot of your dataset. 
+```{r}
+glimpse(all_df)
+```
+
+
+```{r}
+rst_ls=unique(all_df$dba)
+```
+
+```{r}
+paste0(readLines('key.json'))[1]
+```
+
+
+##Yelp API
+```{r}
+Client_ID = 'client_id'
+API_Key = 'API_KEY'
+
+res <- POST("https://api.yelp.com/oauth2/token",
+            body = list(grant_type = "client_credentials",
+                        client_id = Client_ID,
+                        client_secret = API_Key))
+
+token <- content(res)$access_token
+
+```
+
+```{r}
+yelp <- "https://api.yelp.com"
+term <- "sports"
+location <- "Philadelphia, PA"
+categories <- NULL
+limit <- 50
+radius <- 8000
+url <- modify_url(yelp, path = c("v3", "businesses", "search"),
+                  query = list(term = term, location = location, 
+                               limit = limit,
+                               radius = radius))
+res <- GET(url, add_headers('Authorization' = paste("bearer", token)))
+
+results <- content(res)
+```
+
+```{r}
+results
+```
+
