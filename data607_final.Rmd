@@ -10,6 +10,9 @@ output:
 ---
 
 Reference: http://rpubs.com/jasano/inspex
+Score instruction: https://www1.nyc.gov/assets/doh/downloads/pdf/rii/how-we-score-grade.pdf
+blog: https://nycdatascience.com/blog/student-works/nyc-restaurants-reviews-and-inspection-scores/
+
 
 # Acquiring resturant data from NYC Open Data using API
 
@@ -24,6 +27,10 @@ library(tidyverse)
 library(httr)
 library(keyring)
 library(rjson)
+library(yelpr)
+library(RJSONIO)
+library(tibble)
+library(jsonlite)
 ```
 
 ## Read in data
@@ -38,47 +45,50 @@ library(rjson)
 glimpse(all_df)
 ```
 
+## Yelp Fusion API 
 
+#### Get Unique phone number in Open Dataset. 
 ```{r}
-rst_ls=unique(all_df$dba)
+rest_phone=data.frame(all_df$camis,all_df$phone)
+names(rest_phone) = c('camis','phone')
+unique_rest_phone= rest_phone[!duplicated(rest_phone),]
 ```
 
+#### Acquire Yelp business data.
 ```{r}
-paste0(readLines('key.json'))[1]
+key <- 'yelp_api_key'
+n_lower = 24947
+n_upper = 27050
+phone_df=unique_rest_phone[c(n_lower:n_upper),]
+id = c()
+rating = c()
+review_count= c()
+lat= c()
+lon= c()
+price= c()
+phone_ls = c()
+camis_ls = c()
+for(i in 1:nrow(phone_df)) {
+    row <- phone_df[i,]
+    phone=paste0('+1',row$phone)
+    camis=row$camis
+    test=business_search_phone(api_key = key, phone_number = phone)
+    camis_ls = c(camis_ls,camis)
+    phone_ls = c(phone_ls,phone)
+    id = c(id,test$businesses$id)
+    rating=c(rating,test$businesses$rating)
+    review_count = c(review_count,test$businesses$review_count)
+    lat=c(lat,test$businesses$coordinates$latitude)
+    lon=c(lon,test$businesses$coordinates$longitude)
+    price = c(price,test$businesses$price)
+}
+
 ```
 
-
-##Yelp API
+#### Save yelp business data to csv. 
 ```{r}
-Client_ID = 'client_id'
-API_Key = 'API_KEY'
-
-res <- POST("https://api.yelp.com/oauth2/token",
-            body = list(grant_type = "client_credentials",
-                        client_id = Client_ID,
-                        client_secret = API_Key))
-
-token <- content(res)$access_token
-
-```
-
-```{r}
-yelp <- "https://api.yelp.com"
-term <- "sports"
-location <- "Philadelphia, PA"
-categories <- NULL
-limit <- 50
-radius <- 8000
-url <- modify_url(yelp, path = c("v3", "businesses", "search"),
-                  query = list(term = term, location = location, 
-                               limit = limit,
-                               radius = radius))
-res <- GET(url, add_headers('Authorization' = paste("bearer", token)))
-
-results <- content(res)
-```
-
-```{r}
-results
+business_detail= data.frame(cbind(camis_ls,phone_ls,id,rating, review_count, lat,lon,price))
+csvname = paste0('./yelp_data/yelp',n_lower,'_',n_upper,'.csv')
+write.csv(business_detail, file = csvname)
 ```
 
