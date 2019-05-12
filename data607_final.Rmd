@@ -1,6 +1,6 @@
 ---
 title: "Data607_final"
-author: "Wei Zhou"
+author: "Wei Zhou, Mia Chen"
 date: "5/7/2019"
 output: 
   html_document:
@@ -43,6 +43,15 @@ library(jsonlite)
 ###It is always good to know what your data looks like. Using `Glimpse` function will give you a snapshot of your dataset. 
 ```{r}
 glimpse(all_df)
+```
+
+### Tidy up data
+
+#### Convert date information to date class
+```{r}
+all_df$grade_date <- as.Date(all_df$grade_date, "%Y-%m-%d")
+all_df$inspection_date <- as.Date(all_df$inspection_date, "%Y-%m-%d")
+all_df$record_date <- as.Date(all_df$record_date, "%Y-%m-%d %h:%m:%s")
 ```
 
 ## Yelp Fusion API 
@@ -92,3 +101,43 @@ csvname = paste0('./yelp_data/yelp',n_lower,'_',n_upper,'.csv')
 write.csv(business_detail, file = csvname)
 ```
 
+There were 27050 rows of data and we could only retrieve 5000 at a time, thus we had 6 csv files to contain all the data. These 6 csv files were uploaded to Github.
+
+#### Read csv files from github
+```{r}
+yelp1 <- read.csv("https://raw.githubusercontent.com/weizhou2273/data607_final/master/yelp_data/yelp1_5000.csv")
+yelp2 <- read.csv("https://raw.githubusercontent.com/weizhou2273/data607_final/master/yelp_data/yelp5001_10000.csv")
+yelp3 <- read.csv("https://raw.githubusercontent.com/weizhou2273/data607_final/master/yelp_data/yelp10001_15000.csv")
+yelp4 <- read.csv("https://raw.githubusercontent.com/weizhou2273/data607_final/master/yelp_data/yelp15001_19946.csv")
+yelp5 <- read.csv("https://raw.githubusercontent.com/weizhou2273/data607_final/master/yelp_data/yelp19947_24946.csv")
+yelp6 <- read.csv("https://raw.githubusercontent.com/weizhou2273/data607_final/master/yelp_data/yelp24947_27050.csv")
+```
+
+#### Combine all yelp dataframes as a single dataframe
+```{r}
+yelp_df <- as.data.frame(rbind(yelp1, yelp2, yelp3, yelp4, yelp5, yelp6))
+```
+
+```{r}
+glimpse(yelp_df)
+```
+
+
+```{r}
+yelp_df$phone_ls <- as.character(yelp_df$phone_ls)
+yelp_df$phone_ls <- str_replace_all(yelp_df$phone_ls, "^\\+1", "")
+```
+
+```{r}
+yelp_df <- yelp_df %>% rename(phone = phone_ls)
+```
+
+
+### Merge data from two sources into one dataframe
+
+```{r}
+restaurant <- merge(all_df, yelp_df, by = "phone")
+```
+
+```{r}
+glimpse(restaurant)
